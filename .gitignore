@@ -1,0 +1,33 @@
+# Bağımlılıklar
+node_modules/
+
+# Ortam değişkenleri (şablon hariç)
+.env
+.env.*
+!.env.example
+
+# Build çıktıları
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Test çıktıları
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Medya yükleme dizini (host'ta çalıştırma)
+uploads/
+backend/uploads/
+
+# Log / OS / editör
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

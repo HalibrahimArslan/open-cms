@@ -1,0 +1,99 @@
+# CMS — lokal geliştirme ortamı
+#
+# Varsayılan:        docker compose -f infra/docker-compose.yml --env-file .env up -d
+#                    -> yalnızca postgres
+# Uygulamalarla:     docker compose -f infra/docker-compose.yml --env-file .env --profile app up
+#                    -> postgres + backend + frontend (backend/ ve frontend/ dizinleri gerekli)
+#
+# Not: Bu dosya YALNIZCA dev içindir. Prod imajları TASK-021 kapsamında ayrı hazırlanacak.
+
+name: cms
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cms_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-cms}
+    ports:
+      # Host'tan (ör. Prisma Studio, lokal `npm run dev`) erişim için.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    profiles: ["app"]
+    build:
+      context: ../backend
+      dockerfile: ../infra/backend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: ${BACKEND_PORT:-4000}
+      # Container içinde host adı "postgres"tir (host makinedeki "localhost" değil).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cms}:${POSTGRES_PASSWORD:-cms_dev_password}@postgres:5432/${POSTGRES_DB:-cms}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET .env içinde tanımlanmalı}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      UPLOAD_DIR: /app/uploads
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-10}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-change-me}
+      # macOS/Windows bind mount'larda dosya izleme için polling
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "${BACKEND_PORT:-4000}:${BACKEND_PORT:-4000}"
+    volumes:
+      - ../backend:/app
+      # node_modules container içinde kalır; host'takiyle (farklı OS/arch) çakışmaz
+      - backend_node_modules:/app/node_modules
+      - uploads:/app/uploads
+    healthcheck:
+      # Sözleşme: backend GET /health -> 200 (bkz. infra/README.md)
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:$${PORT}/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  frontend:
+    profiles: ["app"]
+    build:
+      context: ../frontend
+      dockerfile: ../infra/frontend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      PORT: ${FRONTEND_PORT:-3000}
+      # Tarayıcının kullandığı API adresi (host üzerinden erişilir)
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+      # Server-side (SSR / route handler) istekleri container ağı üzerinden gider
+      API_INTERNAL_URL: http://backend:${BACKEND_PORT:-4000}
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "${FRONTEND_PORT:-3000}:${FRONTEND_PORT:-3000}"
+    volumes:
+      - ../frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+
+volumes:
+  pgdata:
+  uploads:
+  backend_node_modules:
+  frontend_node_modules:
+  frontend_next:

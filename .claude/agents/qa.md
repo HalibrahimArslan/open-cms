@@ -26,3 +26,4 @@ Bulduğun her bug'ı `docs/tasks/BUGS.md` dosyasına şu formatla ekle:
 ## Kurallar
 - Uygulama kodunu (`frontend/`, `backend/`) **değiştirme**; sadece `tests/` ve `docs/tasks/` altında yaz.
 - PM'e net karar ver: **ONAY** veya **RED** (bug ID'leriyle birlikte).
+- **Belirsiz kararlarda varsayım yapma.** İş o noktada durdurulabiliyorsa durdur; durdurulamıyorsa en güvenli ve kolay geri alınabilir varsayımla devam et. Her iki durumda da soruyu ve (varsa) yaptığın varsayımı raporunda **AÇIK SORU** başlığı altında PM'e bildir. Kullanıcıya doğrudan soru sorma; tüm sorular PM üzerinden gider.

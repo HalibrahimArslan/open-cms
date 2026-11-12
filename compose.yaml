@@ -1,0 +1,9 @@
+# Kökten tek komut: `docker compose up -d` (yalnızca postgres)
+# Uygulamalarla:    `docker compose --profile app up`
+# Asıl tanım infra/docker-compose.yml içindedir; değişkenler kökteki .env'den okunur.
+# `name` her iki giriş noktasında aynı olmalı; aksi halde volume'lar ayrışır.
+name: cms
+
+include:
+  - path: infra/docker-compose.yml
+    env_file: .env

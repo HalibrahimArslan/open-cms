@@ -1,0 +1,12 @@
+# BuildKit bu dosyayı ilgili Dockerfile için otomatik kullanır
+node_modules
+.next
+dist
+build
+coverage
+uploads
+.env
+.env.*
+!.env.example
+*.log
+.git
